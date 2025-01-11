@@ -27,7 +27,7 @@ def handle_post_request():
     
     
     # Procesar mensaje con OpenAI
-    if telefono not in user_message_count:
+    if telefono not in user_message_count:     
         conversation_history.append({
             "role": "user",
             "content":  "Crees que en el siguiente mensaje: " + mensaje +
@@ -53,9 +53,8 @@ def handle_post_request():
             user_message_count[telefono] = 1
 
     if user_message_count[telefono] == 1:
-        print("2")
         if pre_respuestas[1, 1] == " 0":
-            conversation_history.append({"role": "assistant", "content": "Queremos que <Nombre sin apellido> disfrute la fiesta al máximo, por eso nos gustaría saber si el invitado tiene alguna preferencia o restricción alimentaria (por ejemplo: celíaco, vegetariano, vegano, diabético). ¡Contanos y nos adaptamos!"})
+            conversation_history.append({"role": "assistant", "content": "En base a la historia de preguntas y respuestas por favor escribí el siguiente mensaje: // Queremos que (Nombre del invitado sin el apellido) disfrute la fiesta al máximo, por eso nos gustaría saber si el invitado tiene alguna preferencia o restricción alimentaria (por ejemplo: celíaco, vegetariano, vegano, diabético). ¡Contanos y nos adaptamos!//"})
             pregunta_2, conversation_history = process_openai_message(conversation_history)
             print(conversation_history)
             print(pre_respuestas)
@@ -68,8 +67,6 @@ def handle_post_request():
 
 
     if user_message_count[telefono] == 2:
-        print("3")
-
         if pre_respuestas[2, 1] == " 0":
             pregunta_3 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
             conversation_history.append({"role": "assistant", "content": pregunta_3})
@@ -83,8 +80,12 @@ def handle_post_request():
             user_message_count[telefono] = 3
 
 
-    else:
-        print("3")
+    elif user_message_count[telefono] == 3:
+        user_message_count[telefono] = 4
         return jsonify({
-            "pregunta": pregunta_4
+            "pregunta": "Si tenes alguna duda preguntale a Pau."
+        })
+    else:
+        return jsonify({
+            "pregunta": "Fin de la conversación :)"
         })
