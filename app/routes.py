@@ -8,53 +8,84 @@ from io import StringIO
 main_blueprint = Blueprint("main", __name__)
 
 user_message_count = {}
+user_questions = {}
+pre_respuestas = {}
+conversation_history = {}
 
 @main_blueprint.route('/endpoint', methods=['POST'])
 def handle_post_request():
     data = request.get_json()
     telefono = data.get("telefono")
     mensaje = data.get("mensaje")
-    #timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-
-    # Procesar mensaje con OpenAI
-
-
-    if telefono not in user_message_count:
-        conversation_history = [{
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    global pre_respuestas
+    #print(pre_respuestas)
+    conversation_history = [{
             "role":
-            "assistant",
-            "content":
-            "Crees que en el siguiente mensaje: " + mensaje +
+            "user",
+            "content": mensaje  }]
+    
+    
+    # Procesar mensaje con OpenAI
+    if telefono not in user_message_count:
+        conversation_history.append({
+            "role": "user",
+            "content":  "Crees que en el siguiente mensaje: " + mensaje +
             " contiene respuestas de las siguiente informacion: 1. Nombre y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a alguien más ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es || ejemplo de output: 1, Si, Emilio Ferrero; 2, No, NA; 3, No, NA;"
-        }]
-        
+       })  
         pre_respuestas, conversation_history = process_openai_message(conversation_history)
-        print(conversation_history)
-        print(pre_respuestas)
+        #print(conversation_history)
+        #print(pre_respuestas)
         csv_data = StringIO(pre_respuestas.replace(";", "\n"))
         pre_respuestas = np.genfromtxt(csv_data, delimiter=",", dtype=str)
         user_message_count[telefono] = 0
         if pre_respuestas[0, 1] == " No":
             user_message_count[telefono] += 1
+            pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
+            conversation_history.append({"role": "assistant", "content": pregunta_1})
+            #print(conversation_history)
             return jsonify({
-                "pregunta": "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!..."
+                "pregunta": pregunta_1
             })
+        else:
+            user_message_count[telefono] = 1
 
-    elif user_message_count[telefono] == 1:
-        if pre_respuestas[1, 1] == "No":
+    if user_message_count[telefono] == 1:
+        print("2")
+        if pre_respuestas[1, 1] == " No":
+            pregunta_2 = "Queremos que la fiesta se disfrute al máximo..."
+            conversation_history.append({"role": "assistant", "content": pregunta_2})
+            conversation_history.append({"role": "assistant", "content": "Podrias hacer un string con el siguiente formato, tomando el nombre sin el apellido del historial de charlas: Queremos que <Nombre> disfrute al máximo de la fiesta?"})
+            pregunta_2, conversation_history = process_openai_message(conversation_history)
+            print(conversation_history)
+            print(pre_respuestas)
+            user_message_count[telefono] = 2
+            return jsonify({
+                "pregunta": pregunta_2
+            })
+        else:
+            user_message_count[telefono] = 2
+
+
+    if user_message_count[telefono] == 2:
+        print("3")
+
+        if pre_respuestas[2, 1] == " No":
+            pregunta_3 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
+            conversation_history.append({"role": "assistant", "content": pregunta_3})
+            conversation_history.append({"role": "assistant", "content": "Podrias hacer un string afectuoso ycon el siguiente formato, tomando el nombre sin el apellido del historial de charlas: Además de <Nombre> ¿Necesitas confirmar asistencia de alguna persona más?"})
             user_message_count[telefono] += 1
             return jsonify({
-                "pregunta": "Queremos que la fiesta se disfrute al máximo..."
+                "pregunta": pregunta_3
             })
+        
+        else:
+            user_message_count[telefono] = 3
 
-    elif user_message_count[telefono] == 2:
-        if pre_respuestas[2, 1] == "No":
-            user_message_count[telefono] += 1
-            return jsonify({
-                "pregunta": "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
-            })
 
     else:
+        print("3")
+
         return jsonify({
             "pregunta": "Gracias! Ante cualquier duda llamala a Pau."
         })
