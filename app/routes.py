@@ -41,7 +41,7 @@ def handle_post_request():
         user_message_count[telefono] = 0
 
         
-        if pre_respuestas[0, 2] == " NA":
+        if pre_respuestas[0, 1] == " 0":
             user_message_count[telefono] += 1
             pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
             conversation_history.append({"role": "assistant", "content": pregunta_1})
@@ -85,9 +85,6 @@ def handle_post_request():
 
     else:
         print("3")
-        conversation_history.append({"role": "assistant", "content":  "Podrías darme 1 mensaje pelado para ser enviado a un chatbot con este concepto <Gracias, cualquier duda llamala a Pau>"})
-        pregunta_4, conversation_history = process_openai_message(conversation_history)
-    
         return jsonify({
             "pregunta": pregunta_4
         })
