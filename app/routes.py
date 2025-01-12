@@ -59,17 +59,25 @@ def handle_post_request():
         pre_respuestas = np.genfromtxt(csv_data, delimiter=",", dtype=str)
         user_message_count[telefono] = 0
         print(pre_respuestas)
-        print(pre_respuestas[0, 2])
+        #print(pre_respuestas[0, 2])
 
         if pre_respuestas[0, 1] == " 1":
-            #conversation_history.append({"role": "assistant", "content": "Podrias escribirme UNICAMENTE el nombre/apodo y apellido del primer invitado que estor desarrollando una app y lo necesito en ese formato? Gracias!."})
-            #nombre_apellido, conversation_history = process_openai_message(conversation_history)
+            #conversation_history.append({"role": "assistant", "content": "Necesito que extraigas el nombre/apodo y apellido con este formato: 'Nombre o apodo Apellido'"})
+            #nombre_aux, conversation_history = process_openai_message(conversation_history)
             #print(nombre_apellido)
             user_data = { 
                 "Last_Interaction_Timespam": timestamp,
                 "Invitado_1": pre_respuestas[0, 2]}    
             create_or_update_document(collection_name, document_id, user_data)
  
+        if pre_respuestas[1, 1] == " 1":
+            #conversation_history.append({"role": "assistant", "content": "Necesito que extraigas el nombre/apodo y apellido con este formato: 'Nombre o apodo Apellido'"})
+            #nombre_aux, conversation_history = process_openai_message(conversation_history)
+            #print(nombre_apellido)
+            user_data = { 
+                "Last_Interaction_Timespam": timestamp,
+                "Preferencias_1": pre_respuestas[1, 1]}    
+            create_or_update_document(collection_name, document_id, user_data)
 
 
         if pre_respuestas[0, 1] == " 0":
@@ -92,7 +100,7 @@ def handle_post_request():
     
     if user_message_count[telefono] == 1:
             if pre_respuestas[0, 1] == " 0":
-                conversation_history.append({"role": "assistant", "content": "En base a este mensaje: " + mensaje + "Necesito que extraigas el nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido'"})
+                conversation_history.append({"role": "assistant", "content": "En base a este mensaje: " + mensaje + "Necesito que extraigas el nombre/apodo y apellido con este formato: 'Nombre o apodo Apellido'"})
                 nombre_aux, conversation_history = process_openai_message(conversation_history)
                 print(conversation_history)
                 print(nombre_aux)
