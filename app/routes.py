@@ -1,9 +1,17 @@
 from flask import Blueprint, request, jsonify
 from app.services.openai_service import process_openai_message
 from app.services.whatsapp_service import send_whatsapp_message
+from app.services.firebase_service import (
+    add_user,
+    create_or_update_document,
+    read_document,
+    update_document,
+    delete_document
+)
 from datetime import datetime
 import numpy as np
 from io import StringIO
+
 
 main_blueprint = Blueprint("main", __name__)
 
@@ -11,6 +19,8 @@ user_message_count = {}
 user_questions = {}
 pre_respuestas = {}
 conversation_history = {}
+collection_name = "users"
+    
 
 @main_blueprint.route('/endpoint', methods=['POST'])
 def handle_post_request():
@@ -20,6 +30,23 @@ def handle_post_request():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     global pre_respuestas
     #print(pre_respuestas)
+    document_id = telefono  # Un ID único para el documento (por ejemplo, el número del usuario)
+    user_data = {
+        "Creation_Timespam": timestamp,
+        "Last_Interaction_Timespam": timestamp,
+        "Number": telefono
+    }
+
+    # Llamar a la función para crear o actualizar el documento
+    try:
+        create_or_update_document(collection_name, document_id, user_data)
+        print(f"Usuario '{document_id}' creado correctamente.")
+    except Exception as e:
+        print(f"Error al crear el usuario: {e}")
+    
+    
+    
+    
     conversation_history = [{
             "role":
             "user",
