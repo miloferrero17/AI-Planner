@@ -51,14 +51,15 @@ def handle_post_request():
         conversation_history.append({
             "role": "user",
             "content":  "Crees que en el siguiente mensaje: " + mensaje +
-            " contiene respuestas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a alguien más ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA;"
+            " contiene respuestas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a alguien más ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA;"
        })  
         pre_respuestas, conversation_history = process_openai_message(conversation_history)
         #print(conversation_history)
-        #print(pre_respuestas)
         csv_data = StringIO(pre_respuestas.replace(";", "\n"))
         pre_respuestas = np.genfromtxt(csv_data, delimiter=",", dtype=str)
         user_message_count[telefono] = 0
+        print(pre_respuestas)
+        print(pre_respuestas[0, 2])
 
         if pre_respuestas[0, 1] == " 1":
             #conversation_history.append({"role": "assistant", "content": "Podrias escribirme UNICAMENTE el nombre/apodo y apellido del primer invitado que estor desarrollando una app y lo necesito en ese formato? Gracias!."})
@@ -68,16 +69,9 @@ def handle_post_request():
                 "Last_Interaction_Timespam": timestamp,
                 "Invitado_1": pre_respuestas[0, 2]}    
             create_or_update_document(collection_name, document_id, user_data)
-
-        if pre_respuestas[1, 2] == " 1":
-            #conversation_history.append({"role": "assistant", "content": "Unicamente la preferencia alimenticia del inivitado."})
-            #preferencia_alimentaria, conversation_history = process_openai_message(conversation_history)
-            #print(preferencia_alimentaria)
-            user_data = { 
-                "Last_Interaction_Timespam": timestamp,
-                "Preferencias_1": pre_respuestas[1, 2]}    
-            create_or_update_document(collection_name, document_id, user_data)
  
+
+
         if pre_respuestas[0, 1] == " 0":
             user_message_count[telefono] += 1
             pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
@@ -89,20 +83,43 @@ def handle_post_request():
         else:
             user_message_count[telefono] = 1
 
+    
+    
+    
+    
+    
+    
+    
     if user_message_count[telefono] == 1:
-        if pre_respuestas[1, 1] == " 0":
-            conversation_history.append({"role": "assistant", "content": "En base a la historia de preguntas y respuestas por favor escribí el siguiente mensaje: // Queremos que (Nombre del invitado sin el apellido) disfrute la fiesta al máximo, por eso nos gustaría saber si el invitado tiene alguna preferencia o restricción alimentaria (por ejemplo: celíaco, vegetariano, vegano, diabético). ¡Contanos y nos adaptamos!//"})
-            pregunta_2, conversation_history = process_openai_message(conversation_history)
-            #print(conversation_history)
-            #print(pre_respuestas)
-            user_message_count[telefono] = 2
-            return jsonify({
-                "pregunta": pregunta_2
-            })
-        else:
-            user_message_count[telefono] = 2
+            if pre_respuestas[0, 1] == " 0":
+                conversation_history.append({"role": "assistant", "content": "En base a este mensaje: " + mensaje + "Necesito que extraigas el nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido'"})
+                nombre_aux, conversation_history = process_openai_message(conversation_history)
+                print(conversation_history)
+                print(nombre_aux)
+                user_data = { 
+                    "Last_Interaction_Timespam": timestamp,
+                    "Invitado_1": nombre_aux}    
+                create_or_update_document(collection_name, document_id, user_data)
+                
+            if pre_respuestas[1, 1] == " 0":
+                conversation_history.append({"role": "assistant", "content": "En base a la historia de preguntas y respuestas por favor escribí el siguiente mensaje: 'Queremos que (Nombre del invitado sin el apellido) disfrute la fiesta al máximo, por eso nos gustaría saber si el invitado tiene alguna preferencia o restricción alimentaria (por ejemplo: celíaco, vegetariano, vegano, diabético). ¡Contanos y nos adaptamos!'"})
+                pregunta_2, conversation_history = process_openai_message(conversation_history)
+                #print(conversation_history)
+                #print(pre_respuestas)
+                user_message_count[telefono] = 2
+                return jsonify({
+                    "pregunta": pregunta_2
+                })
+            else:
+                user_message_count[telefono] = 2
 
 
+    
+    
+    
+    
+    
+    
     if user_message_count[telefono] == 2:
         if pre_respuestas[2, 1] == " 0":
             pregunta_3 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
