@@ -12,7 +12,6 @@ def get_firestore_client():
     # Asegúrate de que Firebase ya está inicializado antes de llamar a esta función
     return firestore.client()
 
-
 # Inicializar Firebase automáticamente al importar este archivo
 try:
     initialize_firebase()
@@ -20,7 +19,6 @@ try:
     print("Firebase y Firestore inicializados correctamente.")
 except Exception as e:
     print(f"Error al inicializar Firebase: {e}")
-
 
 # **Funciones CRUD para Firestore**
 def add_user(collection_name, document_id, data):
@@ -33,16 +31,27 @@ def add_user(collection_name, document_id, data):
         data (dict): Datos a guardar en el documento.
     """
     try:
-        create_or_update_document(collection_name, document_id, data)
+        create_or_update_document_with_merge(collection_name, document_id, data)
     except Exception as e:
         print(f"Error al agregar el usuario: {e}")
 
-# Crear o actualizar un documento
+# Crear o actualizar un documento sin sobrescribir datos existentes
 def create_or_update_document(collection_name, document_id, data):
     try:
         doc_ref = db.collection(collection_name).document(document_id)
-        doc_ref.set(data)
-        print(f"Documento {document_id} creado/actualizado correctamente en la colección {collection_name}.")
+        
+        # Obtener los datos actuales del documento
+        doc = doc_ref.get()
+        if doc.exists:
+            # Mezclar los datos existentes con los nuevos
+            existing_data = doc.to_dict()
+            merged_data = {**existing_data, **data}  # Priorizará los nuevos valores en caso de conflicto
+            doc_ref.set(merged_data)
+            #print(f"Documento {document_id} actualizado correctamente con mezcla de datos en la colección {collection_name}.")
+        else:
+            # Si no existe, crearlo con los nuevos datos
+            doc_ref.set(data)
+            #print(f"Documento {document_id} creado correctamente en la colección {collection_name}.")
     except Exception as e:
         print(f"Error al crear/actualizar el documento {document_id}: {e}")
 
