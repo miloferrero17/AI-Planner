@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.services.openai_service import process_openai_message
-from app.services.whatsapp_service import send_whatsapp_message
+from app.services.whatsapp_service import send_whatsapp_message, send_whatsapp_message_twilio
 from app.services.firebase_service import (
     add_user,
     create_or_update_document,
@@ -11,6 +11,8 @@ from app.services.firebase_service import (
 from datetime import datetime
 import numpy as np
 from io import StringIO
+from twilio.twiml.messaging_response import MessagingResponse
+
 
 
 main_blueprint = Blueprint("main", __name__)
@@ -20,7 +22,6 @@ user_questions = {}
 pre_respuestas = {}
 conversation_history = {}
 collection_name = "users"
-    
 
 @main_blueprint.route('/endpoint', methods=['POST'])
 def handle_post_request():
@@ -39,25 +40,26 @@ def handle_post_request():
 
     # Llamar a la función para crear o actualizar el documento
     create_or_update_document(collection_name, document_id, user_data)
-    
     conversation_history = [{
             "role":
             "user",
             "content": mensaje  }]
     
+    response = MessagingResponse()
     
     # Procesar mensaje con OpenAI
     if telefono not in user_message_count:     
         conversation_history.append({
             "role": "user",
             "content":  "Crees que en el siguiente mensaje: " + mensaje +
-            " contiene respuestas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a alguien más ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA;"
+            " contiene respuestas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a más de una perona, cuantas? ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' y del primero que mencione || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA;"
        })  
         pre_respuestas, conversation_history = process_openai_message(conversation_history)
         #print(conversation_history)
         csv_data = StringIO(pre_respuestas.replace(";", "\n"))
         pre_respuestas = np.genfromtxt(csv_data, delimiter=",", dtype=str)
         user_message_count[telefono] = 0
+
         print(pre_respuestas)
         #print(pre_respuestas[0, 2])
 
@@ -85,6 +87,8 @@ def handle_post_request():
             pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
             conversation_history.append({"role": "assistant", "content": pregunta_1})
             #print(conversation_history)
+            #send_whatsapp_message_twilio(pregunta_1, telefono)
+            #send_whatsapp_message(telefono, pregunta_1)
             return jsonify({
                 "pregunta": pregunta_1
             })
@@ -129,6 +133,16 @@ def handle_post_request():
     
     
     if user_message_count[telefono] == 2:
+        if pre_respuestas[1, 1] == " 0":
+            conversation_history.append({"role": "assistant", "content": "En base a este mensaje: "+mensaje+" Que preferencia alimentaria tiene (solo el numero)? Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia. "})
+            prefe_aux, conversation_history = process_openai_message(conversation_history)
+            #print(nombre_apellido)
+            user_data = { 
+                "Last_Interaction_Timespam": timestamp,
+                "Preferencias_1":prefe_aux}    
+            create_or_update_document(collection_name, document_id, user_data)
+
+
         if pre_respuestas[2, 1] == " 0":
             pregunta_3 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
             conversation_history.append({"role": "assistant", "content": pregunta_3})
