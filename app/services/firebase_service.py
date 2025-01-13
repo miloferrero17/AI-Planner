@@ -16,7 +16,7 @@ def get_firestore_client():
 try:
     initialize_firebase()
     db = get_firestore_client()
-    print("Firebase y Firestore inicializados correctamente.")
+    #print("Firebase y Firestore inicializados correctamente.")
 except Exception as e:
     print(f"Error al inicializar Firebase: {e}")
 
