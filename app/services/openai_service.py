@@ -24,7 +24,7 @@ def process_openai_message(conversation_history):
 
     # Crear el payload
     payload = {
-        "model": "gpt-4o",
+        "model": "gpt-4",
         "messages": conversation_history,
         "temperature": 0
     }

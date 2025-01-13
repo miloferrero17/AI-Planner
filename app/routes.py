@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.services.openai_service import process_openai_message
-from app.services.whatsapp_service import send_whatsapp_message, send_whatsapp_message_twilio
+from app.services.whatsapp_service import send_whatsapp_message
 from app.services.firebase_service import (
     add_user,
     create_or_update_document,
@@ -11,7 +11,6 @@ from app.services.firebase_service import (
 from datetime import datetime
 import numpy as np
 from io import StringIO
-from twilio.twiml.messaging_response import MessagingResponse
 
 
 main_blueprint = Blueprint("main", __name__)
@@ -44,7 +43,6 @@ def handle_post_request():
             "user",
             "content": mensaje  }]
     
-    response = MessagingResponse()
     
     # Procesar mensaje con OpenAI
     if telefono not in user_message_count:     
@@ -86,7 +84,6 @@ def handle_post_request():
             pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
             conversation_history.append({"role": "assistant", "content": pregunta_1})
             #print(conversation_history)
-            #send_whatsapp_message_twilio(pregunta_1, telefono)
             #send_whatsapp_message(telefono, pregunta_1)
             return jsonify({
                 "pregunta": pregunta_1
