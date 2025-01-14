@@ -28,7 +28,7 @@ def handle_post_request():
     mensaje = data.get("mensaje")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     global pre_respuestas
-    #print(pre_respuestas)
+    print(pre_respuestas)
     document_id = telefono  # Un ID único para el documento (por ejemplo, el número del usuario)
     user_data = {
         "Creation_Timespam": timestamp,
