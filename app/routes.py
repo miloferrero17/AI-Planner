@@ -28,7 +28,7 @@ def handle_post_request():
     mensaje = data.get("mensaje")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     global pre_respuestas
-    print(pre_respuestas)
+    '''
     document_id = telefono  # Un ID único para el documento (por ejemplo, el número del usuario)
     user_data = {
         "Creation_Timespam": timestamp,
@@ -38,12 +38,13 @@ def handle_post_request():
 
     # Llamar a la función para crear o actualizar el documento
     create_or_update_document(collection_name, document_id, user_data)
+'''
     conversation_history = [{
             "role":
             "user",
             "content": mensaje  }]
     
-    
+    #print(conversation_history)
     # Procesar mensaje con OpenAI
     if telefono not in user_message_count:     
         conversation_history.append({
@@ -53,6 +54,8 @@ def handle_post_request():
        })  
         pre_respuestas, conversation_history = process_openai_message(conversation_history)
         #print(conversation_history)
+        print(pre_respuestas)
+        
         csv_data = StringIO(pre_respuestas.replace(";", "\n"))
         pre_respuestas = np.genfromtxt(csv_data, delimiter=",", dtype=str)
         user_message_count[telefono] = 0
