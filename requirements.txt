@@ -2,7 +2,7 @@ Flask==2.3.2
 python-dotenv==1.0.0
 requests==2.31.0
 numpy==1.24.0
-openai=0.28.0
+openai==0.28.0
 requestspython run.py
 numpy
 twilio
