@@ -182,15 +182,15 @@ def handle_post_request():
         if pre_respuestas[2, 1] == " 0":
             #print(pre_respuestas)
             #conversation_history.append({"role": "user", "content": "Respuesta acompa: " + mensaje})
-            conversation_history.append({"role": "assistant", "content": "Por Si o por No, en base a este mensaje: "+mensaje+" nombra a alguna persona mas"})
+            conversation_history.append({"role": "assistant", "content": "Por 1 por Si o 0 por No, en base a este mensaje: "+mensaje+" nombra a alguna persona mas"})
             print(conversation_history)
             acompa_aux, conversation_history = process_openai_message(conversation_history)
             print(acompa_aux)
 
-            if acompa_aux == "Si":
+            if acompa_aux == "1":
                 user_message_count[telefono] = -1
                 return jsonify({
-                    "pregunta": "Avancemos con el proximo"
+                    "pregunta": "Avancemos con el proximo, contame de él!"
                 })
             else:
                 user_message_count[telefono] = 4
