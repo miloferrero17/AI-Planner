@@ -23,12 +23,18 @@ conversation_history = []
 
 ##### Preguntas a ser migradas a la dB
 contexto = "Contexto: sos un asistente que le hace a padres/madres/tutores de invitados a una fiesta de 15 años preguntas sobre los invitados. Nombre/Apellido y preferencia alimentaria. El resultado buscado es un listado de 3 columnas: el telefono del responsable, el nombre y apellido del invitado y la preferencia alimentaria del invitado"
-razonamiento_generalista = " Razonamiento: Crees que el mensaje previo contiene respuestas válidas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a más de una perona, cuantas? ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' y del primero que mencione || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA. En caso de que el mensaje sea raro o tengas problema para interpretarlo 'Schema Error'"
-pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
-pregunta_3 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
-pregunta_acompa = "Avancemos con el proximo, contame de él o ella: nombre y apellido y preferencia alimenticia!"
+razonamiento_generalista = " Razonamiento: Crees que el mensaje previo contiene respuestas válidas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a más de una perona, cuantas? ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' y del primero que mencione || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA. En caso de que el mensaje sea raro escribime 'Schema Error'"
+razonamiento_nombre = "Razonamiento: Necesito que extraigas y valides la correctitud si el nombre/apodo y apellido del invitado que primero menciona con este formato: 'Nombre o apodo Apellido; en caso de tener algun problema devolve 'Schema Error'"
+razonamiento_prefe = "Razonamiento: Necesito que extraigas la preferencia alimentaria con este formato: Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - otro, y me contestes con el numero solamente; , en caso de tener algun problema devolve 'Schema Error'"
+razonamiento_acomp = "Razonamiento: En base al historial de conversacion: el usuario esta confirmando la asistencia de otro invitado? Responde con 1 por si o opr 0 por no. En caso de que encuentres errores responde 'Schema Error'"
+
+pregunta_nombre = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
+pregunta_acompa_1 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
+pregunta_acompa_2 = "Avancemos con el proximo, contame de él o ella: nombre y apellido y preferencia alimenticia!"
+
 error_nombre = "Me cuesta entenderte ¿Podrías insertar el nombre y apellido del inivitado únicamente?"
 error_prefe = "Me cuesta entenderte ¿Podrías escribir unicamente los numeros 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia?"
+error_acomp ="Me cuesta entenderte ¿Podrías decirme si viene algun invitado mas?"
 
 
 
@@ -42,9 +48,6 @@ def handle_post_request():
     global pre_respuestas
 
     # Actualiza la conversación específica del teléfono
-    conversation_history.append({"role": "user", "content": "Respuesta: " + mensaje})
-    print(pre_respuestas)
-
     #document_id = telefono  # Un ID único para el documento (por ejemplo, el número del usuario)
     #user_data = {
     #    "Creation_Timespam": timestamp,
@@ -61,17 +64,20 @@ def handle_post_request():
     if telefono not in user_message_count or user_message_count[telefono] == -1:
         #conversation_history = [{"role": "user", "content": "Respuesta abierta: " + mensaje}]
         conversation_history.append({"role": "assistant", "content": contexto })
+        conversation_history.append({"role": "user", "content": "Mensaje de apertura: " + mensaje})
         conversation_history.append({
             "role": "assistant",
-            "content":  mensaje + razonamiento_generalista
+            "content":  "Mensaje de apertura: " + mensaje +"; " + razonamiento_generalista
        })  
+        print(conversation_history)
         pre_respuestas, conversation_history = process_openai_message(conversation_history)
         #print(conversation_history)
-        print(pre_respuestas)
+        
+        
         if pre_respuestas == "Schema Error":
             user_message_count[telefono] = -1
             return jsonify({
-            "pregunta": pregunta_1
+            "pregunta": pregunta_nombre
             })
         
         #Valido si las dimensiones de pre_respuestas en 3x3 o la inicio
@@ -81,6 +87,7 @@ def handle_post_request():
         # Verifica las dimensiones del array
         expected_shape = (3, 3)
         # Si las dimensiones no coinciden
+        
         if pre_respuestas.shape != expected_shape:
             print(f"Dimensiones incorrectas: {pre_respuestas.shape}. Ajustando...")
             # Crear un array vacío con valores por defecto ("NA" para texto)
@@ -90,14 +97,15 @@ def handle_post_request():
             cols_to_copy = min(pre_respuestas.shape[1], expected_shape[1])
             fixed_respuestas[:rows_to_copy, :cols_to_copy] = pre_respuestas[:rows_to_copy, :cols_to_copy]
             pre_respuestas = fixed_respuestas
+        print(pre_respuestas)
 
         user_message_count[telefono] = 0
 
         #### Pre cargo en la dB las variables que me contestó en la respuesta abierta
         if pre_respuestas[0, 1] == " 1":
-            conversation_history.append({"role": "assistant", "content": "Razonamiento: Necesito que extraigas y valides la correctitud si el nombre/apodo y apellido del invitado que primero menciona con este formato: 'Nombre o apodo Apellido; en caso de tener algun problema devolve 'Schema Error'"})
+            conversation_history.append({"role": "assistant", "content": razonamiento_nombre})
             nombre_aux, conversation_history = process_openai_message(conversation_history)
-            print(nombre_aux)
+            #print(nombre_aux)
 
             if nombre_aux == "Schema Error":
                 user_message_count[telefono] = 1
@@ -106,7 +114,7 @@ def handle_post_request():
                 })
         
             
-            print(nombre_aux)
+            #print(nombre_aux)
 
             #user_data = { 
             #    "Last_Interaction_Timespam": timestamp,
@@ -114,14 +122,14 @@ def handle_post_request():
             #create_or_update_document(collection_name, document_id, user_data)
          
         if pre_respuestas[1, 1] == " 1":
-            conversation_history.append({"role": "assistant", "content": "Razonamiento: Necesito que extraigas la preferencia alimentaria con este formato: Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - otro, y me contestes con el numero solamente; , en caso de tener algun problema devolve  "})
+            conversation_history.append({"role": "assistant", "content": razonamiento_prefe})
             prefe_aux, conversation_history = process_openai_message(conversation_history)
-            print(prefe_aux)
+            #print(prefe_aux)
             
             if prefe_aux == "Schema Error":
                 user_message_count[telefono] = 1
                 return jsonify({
-                "pregunta": prefe_aux
+                "pregunta": error_prefe
                 })
 
             #user_data = { 
@@ -133,12 +141,12 @@ def handle_post_request():
         #### Pregunta cerrada de nombre
         if pre_respuestas[0, 1] == " 0":
             user_message_count[telefono] = 1
-            conversation_history.append({"role": "assistant", "content": "Pregunta nombre:" + pregunta_1})
+            conversation_history.append({"role": "assistant", "content": "Pregunta nombre:" + pregunta_nombre})
             #print(conversation_history)
             #send_whatsapp_message(telefono, pregunta_1)
             
             return jsonify({
-                "pregunta": pregunta_1
+                "pregunta": pregunta_nombre
             })
         
         else:
@@ -149,12 +157,12 @@ def handle_post_request():
             if pre_respuestas[0, 1] == " 0":
                 #print(conversation_history)
                 #conversation_history.append({"role": "user", "content": "Respuesta nombre: " + mensaje})
-                conversation_history.append({"role": "assistant", "content": "Razonamiento: Necesito que extraigas el nombre/apodo y apellido del invitado con este formato: //Nombre o apodo Apellido//"})
+                conversation_history.append({"role": "assistant", "content": "Respueta: " + mensaje +"; "+ razonamiento_nombre})
                 nombre_aux, conversation_history = process_openai_message(conversation_history)
                 #print(conversation_history)
                 print("Nombre declarado: " +nombre_aux)
 
-            if nombre_aux == "Schema Error":
+                if nombre_aux == "Schema Error":
                     user_message_count[telefono] = 1
                     return jsonify({
                     "pregunta": error_nombre
@@ -168,8 +176,8 @@ def handle_post_request():
             ### Pregunta cerrada de preferencia_alimenticia
             if pre_respuestas[1, 1] == " 0":
                 #conversation_history.append({"role": "user", "content": "Respuesta preferencias alimenticias: " + mensaje})
-                conversation_history.append({"role": "assistant", "content": "Razonamiento: En base a la historia de preguntas y respuestas por favor escribí el siguiente mensaje: 'Queremos que (Nombre del invitado sin el apellido) disfrute la fiesta al máximo, por eso nos gustaría saber si el invitado tiene alguna preferencia o restricción alimentaria (por ejemplo: celíaco, vegetariano, vegano, diabético). ¡Contanos y nos adaptamos!'"})
-                #pregunta_2, conversation_history = process_openai_message(conversation_history)
+                conversation_history.append({"role": "assistant", "content": mensaje + razonamiento_prefe})
+                pregunta_2, conversation_history = process_openai_message(conversation_history)
                                 
                 user_message_count[telefono] = 2
                 return jsonify({
@@ -184,7 +192,7 @@ def handle_post_request():
         ### Respuesta cerrada de preferencia alimenticia        
         if pre_respuestas[1, 1] == " 0":
             #conversation_history.append({"role": "user", "content": "Respuesta preferencia alimenticia: " + mensaje})
-            conversation_history.append({"role": "assistant", "content": mensaje + "Razonamiento: En base a este mensaje anterior Que preferencia alimentaria tiene (solo el numero)? Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia. Enviame unicamente 1,2,3,4,5 o 'Schema Error' en caso de error"})
+            conversation_history.append({"role": "assistant", "content":mensaje + razonamiento_prefe})
             prefe_aux, conversation_history = process_openai_message(conversation_history)
             print(prefe_aux)
             
@@ -201,10 +209,10 @@ def handle_post_request():
 
         ### Pregunta cerrada de acompañante
         if pre_respuestas[2, 1] == " 0":
-            conversation_history.append({"role": "assistant", "content": "Pregunta Acompañante:" + pregunta_3})
+            conversation_history.append({"role": "assistant", "content": "Pregunta Acompañante:" + pregunta_acompa_1})
             user_message_count[telefono] = 3
             return jsonify({
-                "pregunta": pregunta_3
+                "pregunta": pregunta_acompa_1
             })
         
         else:
@@ -216,7 +224,7 @@ def handle_post_request():
         if pre_respuestas[2, 1] == " 1":
             user_message_count[telefono] = -1
             return jsonify({
-                "pregunta": pregunta_acompa
+                "pregunta": pregunta_acompa_2
             })
         
       
@@ -224,9 +232,17 @@ def handle_post_request():
         if pre_respuestas[2, 1] == " 0":
             #print(pre_respuestas)
             #conversation_history.append({"role": "user", "content": "Respuesta acompa: " + mensaje})
-            conversation_history.append({"role": "assistant", "content": "Razonamiento: En base a este mensaje: "+mensaje+" el usuario esta confirmando la asistencia de otro invitado? Responde con 1 por si o opr 0 por no.   "})
+            conversation_history.append({"role": "assistant", "content": mensaje + razonamiento_acomp})
             print(conversation_history)
             acompa_aux, conversation_history = process_openai_message(conversation_history)
+            if acompa_aux == "Schema Error":
+                user_message_count[telefono] = 3
+                return jsonify({
+                "pregunta": error_acomp
+                })
+            
+            
+            
             print(acompa_aux)
             
 
@@ -234,7 +250,7 @@ def handle_post_request():
             if acompa_aux == "1":
                 user_message_count[telefono] = -1
                 return jsonify({ 
-                    "pregunta": pregunta_acompa
+                    "pregunta": pregunta_acompa_2
                 })
             else:
                 user_message_count[telefono] = 4
