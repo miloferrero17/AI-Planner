@@ -182,7 +182,7 @@ def handle_post_request():
         if pre_respuestas[2, 1] == " 0":
             #print(pre_respuestas)
             #conversation_history.append({"role": "user", "content": "Respuesta acompa: " + mensaje})
-            conversation_history.append({"role": "assistant", "content": "Por 1 por Si o 0 por No, en base a este mensaje: "+mensaje+" nombra a alguna persona mas"})
+            conversation_history.append({"role": "assistant", "content": "Razonamiento: En base a este mensaje: "+mensaje+" tiene que confirmar la asistencia de otro invitado? Responde con 1 por si o opr 0 por no.   "})
             print(conversation_history)
             acompa_aux, conversation_history = process_openai_message(conversation_history)
             print(acompa_aux)
