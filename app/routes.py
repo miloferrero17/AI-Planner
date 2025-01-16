@@ -14,7 +14,6 @@ from io import StringIO
 
 
 main_blueprint = Blueprint("main", __name__)
-
 user_message_count = {}
 user_questions = {}
 pre_respuestas = {}
