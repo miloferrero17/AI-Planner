@@ -18,11 +18,13 @@ user_message_count = {}
 user_questions = {}
 pre_respuestas = {}
 conversation_history = []
+num_invitado = 1
+
 #collection_name = "users"
 
 ##### Preguntas a ser migradas a la dB
 contexto = "Contexto: sos un asistente que le hace a padres/madres/tutores de invitados a una fiesta de 15 años preguntas sobre los invitados. Nombre/Apellido y preferencia alimentaria. El resultado buscado es un listado de 3 columnas: el telefono del responsable, el nombre y apellido del invitado y la preferencia alimentaria del invitado"
-razonamiento_generalista = " Asistente: Crees que el mensaje previo contiene respuestas válidas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a más de una perona, cuantas? ||| contestame únicamente un texto con (en este orden): + número de pregunta este la informacion o no (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' y del primero que mencione || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA.'"
+razonamiento_generalista = " Asistente: Crees que el mensaje previo contiene respuestas válidas de las siguiente informacion: 1. Nombre (o Apodo) y Apellido del invitado (no cofundir con el nombre y apellido de la madre/padre) ||| 2. Preferencia Alimentaria siendo: 1 - celiaco; 2 - diabetico; 3 - vegetariano; 4 - vegano; 5 - Sin preferencia ||| 3. Si confirma a más de una perona, cuantas? ||| contestame únicamente un texto en este orden: + número de pregunta (este la informacion o no) (1,2 o 3) // + '1' si estás 100% seguro que con la respuesta del usuario se le puede dar una respuesta a esa pregunta o '0' // + y que estes seguro de la respuesta cual es, en caso de nombre/apodo y apellido con este formato: 'Nombre y apodo' ' ' ''Apellido' y del primero que mencione || ejemplo de output: 1, 1, Emilio Ferrero; 2, 0, NA; 3, 0, NA.'"
 
 pregunta_1 = "Muchas gracias por tomarte estos minutos para hacer la confirmación a la fiesta de Pupe!. ¿Podrías decirme el nombre y apellido de la persona que confirmás y si va a asistir al evento?"
 razonamiento_1="¿Cual es el nombre/apodo y apellido declarado? (Por favor responde solo eso)"
@@ -31,10 +33,13 @@ pregunta_2 = "Queremos que la fiesta se disfrute al máximo, por eso nos gustar�
 razonamiento_2 = "¿Cual es la preferencia alimenticia del invitado? Respondeme con los numeros detallados previamente."
 
 pregunta_3 = "Muchas gracias por la info! ¿Necesitas confirmar asistencia de alguna persona más?"
-razonamiento_3="Crees que el usuario va a invitar a otra persona? Responde con 1 por si o opr 0 por no."
+razonamiento_3= "Crees que el usuario va a invitar a otra persona? Responde con 1 por si o opr 0 por no."
 
 pregunta_4 = "Avancemos con el proximo, contame de él o ella: nombre y apellido y preferencia alimenticia!"
               
+pregunta_5 = "Genial! Ya lo agregamos a la lista de invitados. ¿Tenes alguna otra duda?"
+
+cierre = "Fin de la conversación, cualquier duda habla con Pau :)"
 
 conversation_history.append({"role": "assistant", "content": contexto })
 
@@ -42,14 +47,15 @@ conversation_history.append({"role": "assistant", "content": contexto })
 @main_blueprint.route('/endpoint', methods=['POST'])
 def handle_post_request():
     global conversation_history
+    global pre_respuestas
+    global num_invitado
     data = request.get_json()
     telefono = data.get("telefono")
     mensaje = data.get("mensaje")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    global pre_respuestas
-
     # Razonar sobre respuesta_abierta
     if telefono not in user_message_count or user_message_count[telefono] == -1:
+        print(num_invitado)
         user_message_count[telefono] = 0
         conversation_history.append({
             "role": "user",
@@ -172,6 +178,7 @@ def handle_post_request():
         ### Respuesta abierta de acompañante        
         if pre_respuestas[2, 1] == " 1":
             user_message_count[telefono] = -1
+            num_invitado = num_invitado + 1
             conversation_history.append({
                 "role": "user", 
                 "content": "User:" + pregunta_4
@@ -198,18 +205,19 @@ def handle_post_request():
 
             if acompa_aux == "1":
                 user_message_count[telefono] = -1
+                num_invitado = num_invitado + 1
                 return jsonify({ 
                     "pregunta": pregunta_4
                 })
             else:
                 user_message_count[telefono] = 4
                 return jsonify({
-                    "pregunta": "Genial! Ya lo agregamos a la lista de invitados. ¿Tenes alguna otra duda?"
+                    "pregunta": pregunta_5
                 })
       
         ### Fin de la charla-agradecimiento       
 
     else:
         return jsonify({
-            "pregunta": "Fin de la conversación, cualquier duda habla con Pau :)"
+            "pregunta": cierre
         })
