@@ -100,7 +100,10 @@ def handle_post_request():
 
         print(pre_respuestas)
         #### ESCRIBO EN DB todas las que tengan respuestas
-
+        if pre_respuestas[2, 1] != " 0":
+            print("Muchos invitados")
+            #Vector con nombres de innvitadoscl
+        
         #### Le hago la pregunta cerrada de nombre y apellido
         if pre_respuestas[0, 1] == " 0":
             user_message_count[telefono] = 1
@@ -129,7 +132,6 @@ def handle_post_request():
                     })
 
                 nombre_aux, conversation_history = process_openai_message(conversation_history)
-                print(nombre_aux)
                 
                 #### ESCRIBO EN DB nombre_aux
 
@@ -141,9 +143,10 @@ def handle_post_request():
             #### Le hago la pregunta cerrada de preferencia alimenticia
             if pre_respuestas[1, 1] == " 0":
                 user_message_count[telefono] = 2
+                cadena = str(num_invitado)
                 conversation_history.append({
                     "role": "assistant", 
-                    "content": "Realiza una pregunta amigable a partir de esta utilizando solo el nombre o apodo: " + pregunta_2 + "; "
+                    "content": "Realiza una pregunta amigable a partir de la pregunta a continuación utilizando solo el nombre o apodo del "+cadena+" invitado"  + pregunta_2 + "; "
                     })
 
                 pregunta_2, conversation_history = process_openai_message(conversation_history)
